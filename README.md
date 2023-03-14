@@ -1,0 +1,2 @@
+# Simple stable-diffusion v2 image generator on CPU
+Just give it a prompt and wait for result. I generate 1024 x 1024 pictures and it actually takes pretty much time - about a 50 minutes. Also takes near 10 Gb of memory but might be a little more, so make sure you have enough memory to avoid kills by OOM.
