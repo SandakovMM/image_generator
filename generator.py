@@ -1,31 +1,48 @@
 #!/usr/bin/env python3
-import sys
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from optparse import OptionParser, OptionValueError
 
-if len(sys.argv) < 2:
-    print("Please provide a prompt.")
-    sys.exit(1)
 
-pipeline = StableDiffusionPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-2-1",
-)
-pipeline.scheduler = DPMSolverMultistepScheduler.from_config(pipeline.scheduler.config)
-pipeline.enable_attention_slicing()
-pipeline.to("cpu")
+def generate(prompt, height=512, width=512, output="result.png"):
+    pipeline = StableDiffusionPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-2-1",
+    )
+    pipeline.scheduler = DPMSolverMultistepScheduler.from_config(pipeline.scheduler.config)
+    pipeline.enable_attention_slicing()
+    pipeline.to("cpu")
 
-prompt = sys.argv[1]
+    results = pipeline([prompt], height=height, width=width,
+                       num_inference_steps=20, num_images_per_prompt=1)
+    results.images[0].save(output)
 
-# Todo. Yes I know that non positional arguments are better.
-height = width = 512
-if len(sys.argv) >= 3:
-    height = int(sys.argv[2])
-if len(sys.argv) >= 4:
-    width = int(sys.argv[3])
 
-if height % 16 != 0 or width % 16 != 0:
-    print("Height and width must be divisible by 16.")
-    sys.exit(1)
+HELP_MESSAGE = """usage: %prog [options] prompt
 
-results = pipeline([prompt], height=height, width=width, num_inference_steps=20, num_images_per_prompt=4)
-for idx, image in enumerate(results.images):
-    image.save("my_image" + str(idx) + ".png")
+This script generates images from a prompt using the Stable Diffusion model.
+Default image size is 512x512. The image size must be divisible by 16.
+"""
+
+
+def main():
+    opts = OptionParser(usage=HELP_MESSAGE)
+    opts.add_option("--height", dest="height", type="int", default=512, help="height of the generated image")
+    opts.add_option("--width", dest="width", type="int", default=512, help="width of the generated image")
+    opts.add_option("-o", "--output", dest="output", type="string", default="result.png", help="output file name")
+
+    (options, args) = opts.parse_args()
+
+    if len(args) < 1:
+        opts.error("prompt not specified")
+
+    prompt = args[0]
+    height = options.height
+    width = options.width
+
+    if height % 16 != 0 or width % 16 != 0:
+        raise OptionValueError("height and width must be divisible by 16")
+
+    generate(prompt, height, width, output=options.output)
+
+
+if __name__ == "__main__":
+    main()
